@@ -33,6 +33,10 @@ class NBCPT(object):
         - A_i: the index of the child variable
     '''
 
+    self.A_i = A_i
+    self.count_c = 0
+    self.count_A_i = [0]*2
+
   def learn(self, A, C):
     '''
     TODO
@@ -42,6 +46,7 @@ class NBCPT(object):
         - C: a 1-d n-element numpy where the elements correspond to the
           class labels of the rows in A
     '''
+
 
 
   def get_cond_prob(self, entry, c):
@@ -98,6 +103,15 @@ class NBClassifier(object):
 
 
 # load data
+'''
+A_data:
+n: 0
+y: 1
+
+C_data:
+1: democrat
+0:republican
+'''
 A_data, C_data = load_vote_data()
 
 
