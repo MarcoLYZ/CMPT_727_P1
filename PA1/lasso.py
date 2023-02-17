@@ -120,5 +120,13 @@ def main():
 	print('LASSO  P(C= 1|A_observed) ')
 	lasso_evaluate_incomplete_entry()
 	'''
+	train_error = np.zeros(10)
+	test_error = np.zeros(10)
+	for i in range(10):
+		x, y =lasso_evaluate(train_subset=True, subset_size=i*10+10)
+		test_error[i] = y
+		train_error[i] =x
+	print(train_error)
+	print(test_error)
 if __name__ == "__main__":
     main()

@@ -275,10 +275,17 @@ def main():
         index + 1))
     predict_unobserved(NBClassifier, index)
    '''
-    print('Naive Bayes')
-    accuracy, num_examples = evaluate(NBClassifier, train_subset=False)
-    print('  10-fold cross validation total test error {:2.4f} on {} '
-          'examples'.format(1 - accuracy, num_examples))
+    print('Naive Bayes (Small Data)')
+    train_error = np.zeros(10)
+    test_error = np.zeros(10)
+    for x in range(10):
+        accuracy, train_accuracy = evaluate(NBClassifier, train_subset=True, subset_size=(x + 1) * 10)
+        train_error[x] = 1 - train_accuracy
+        test_error[x] = 1 - accuracy
+        print('  10-fold cross validation total test error {:2.4f} total train error {:2.4f}on {} ''examples'.format(
+            1 - accuracy, 1 - train_accuracy, (x + 1) * 10))
+    print(train_error)
+    print(test_error)
 
 
 if __name__ == '__main__':
