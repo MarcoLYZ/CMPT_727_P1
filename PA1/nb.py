@@ -35,7 +35,7 @@ class NBCPT(object):
         '''
         self.A_i = A_i
         self.count_c = [0] * 2
-        self.count_A_i = [[0, 0]] * 2
+        self.count_A_i = np.zeros((2, 2))
 
     def learn(self, A, C):
         '''
@@ -59,7 +59,6 @@ class NBCPT(object):
             - c: the class
         '''
         return (self.count_A_i[entry[self.A_i]][c] + alpha) / (self.count_c[c] + 2 * alpha)
-
 
 
 class NBClassifier(object):
