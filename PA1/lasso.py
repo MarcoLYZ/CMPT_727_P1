@@ -114,7 +114,7 @@ def main():
 	print(train_error)
 	print(test_error)
 	#Q4
-	#TODO
+	# lasso.coef_
 	#You may find lasso.coef_ useful
 	#Q5
 	print('LASSO  P(C= 1|A_observed) ')

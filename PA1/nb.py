@@ -8,7 +8,7 @@ import math
 import itertools
 from itertools import product
 # helpers to load data
-from data_helper import load_vote_data, load_incomplete_entry, load_simulate_data
+from data_helper import load_vote_data, load_incomplete_entry, load_simulate_data, generate_q4_data
 
 # helpers to learn and traverse the tree over attributes
 
@@ -78,8 +78,6 @@ class NBClassifier(object):
         self.p_c = [0] * 2
         self._train(A_train, C_train)
 
-
-
     def _train(self, A_train, C_train):
         ''' TODO
         train your NB classifier with the specified data and class labels
@@ -119,8 +117,6 @@ class NBClassifier(object):
         pred_label = max(log_probs, key=log_probs.get)
         return (pred_label, log_probs[pred_label])
 
-
-
     def predict_unobserved(self, entry, index):
         ''' TODO
         Predicts P(A_index  | mid entry)
@@ -151,7 +147,8 @@ C_data:
 1: democrat
 0:republican
 '''
-A_data, C_data = load_vote_data()
+# A_data, C_data = load_vote_data()
+A_data, C_data = load_simulate_data('./data/q4_data')
 
 
 def evaluate(classifier_cls, train_subset=False, subset_size=0):
@@ -265,7 +262,8 @@ def main():
       print('  10-fold cross validation total test error {:2.4f} total train error {:2.4f}on {} ''examples'.format(1 - accuracy, 1- train_accuracy  ,(x+1)*10))
     print(train_error)
     print(test_error)
-    ##For Q4 TODO
+    ##For Q4
+    generate_q4_data(4000, './data/q4_data')
     ##For Q5
     print('Naive Bayes Classifier on missing data')
     evaluate_incomplete_entry(NBClassifier)
@@ -279,7 +277,7 @@ def main():
     train_error = np.zeros(10)
     test_error = np.zeros(10)
     for x in range(10):
-        accuracy, train_accuracy = evaluate(NBClassifier, train_subset=True, subset_size=(x + 1) * 10)
+        accuracy, train_accuracy = evaluate(NBClassifier, train_subset=True, subset_size=(x + 1) * 400)
         train_error[x] = 1 - train_accuracy
         test_error[x] = 1 - accuracy
         print('  10-fold cross validation total test error {:2.4f} total train error {:2.4f}on {} ''examples'.format(
