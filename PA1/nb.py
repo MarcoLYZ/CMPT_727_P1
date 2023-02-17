@@ -76,7 +76,8 @@ class NBClassifier(object):
             - cpts: a list of NBCPT objects
         '''
         self.cpts = []
-        self.P_c = [0] * 2
+        self.p_c = [0] * 2
+        self._train(A_train, C_train)
 
 
 
@@ -91,7 +92,7 @@ class NBClassifier(object):
         n = len(C_train)
         classes, counts = np.unique(C_train, return_counts=True)
         for i in range(len(classes)):
-            self.P_c[classes[i]] = counts[i] / n
+            self.p_c[classes[i]] = counts[i] / n
 
         for i in range(A_train.shape[1]):
             cpt = NBCPT(i)
@@ -109,8 +110,8 @@ class NBClassifier(object):
         assignment in a tuple, e.g. return (c_pred, logP_c_pred)
         '''
         log_probs = {}
-        for c in self.P_c:
-            log_prob = np.log(self.P_c[c])
+        for c in [0, 1]:
+            log_prob = np.log(self.p_c[c])
             for i in range(len(entry)):
                 log_prob += self.cpts[i].get_cond_prob(entry, c)
             log_probs[c] = log_prob
@@ -127,6 +128,18 @@ class NBClassifier(object):
         Return a tuple of probabilities for A_index=0  and  A_index = 1
         We only use the 2nd value (P(A_index =1 |entry)) in this assignment
         '''
+        probs = []
+        for val in [0, 1]:
+            entry[index] = val
+            log_p_c0, log_p_c1 = 0, 0
+            for i, cpt in enumerate(self.cpts):
+                log_p_c0 += cpt.get_cond_prob(entry, 0)
+                log_p_c1 += cpt.get_cond_prob(entry, 1)
+            log_p_c0 += np.log(self.p_c[0])
+            log_p_c1 += np.log(self.p_c[1])
+            p_ai_given_entry = np.exp(log_p_c1) / (np.exp(log_p_c0) + np.exp(log_p_c1))
+            probs.append(p_ai_given_entry)
+        return tuple(probs)
 
 
 # load data
@@ -263,8 +276,10 @@ def main():
         index + 1))
     predict_unobserved(NBClassifier, index)
    '''
-    A_data, C_data = load_vote_data()
-    print(A_data)
+    print('Naive Bayes')
+    accuracy, num_examples = evaluate(NBClassifier, train_subset=False)
+    print('  10-fold cross validation total test error {:2.4f} on {} '
+          'examples'.format(1 - accuracy, num_examples))
 
 
 if __name__ == '__main__':
