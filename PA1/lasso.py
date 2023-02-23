@@ -95,6 +95,28 @@ def lasso_evaluate_incomplete_entry():
 	print(lasso_predit)
 
 
+def q4_solution(subset_size):
+	# load synthetic data
+	dpa_synthetic = pd.read_csv('./data/q4_data')
+	dpa_synthetic['Class'] = dpa_synthetic['Class'].map({'republican': 0, 'democrat': 1})
+	for i in range(16):
+		index = 'A' + str(i + 1)
+		dpa_synthetic[index] = dpa_synthetic[index].map({'y': 1, 'n': 0})
+	# dpa.info()
+
+	pay_synthetic = dpa_synthetic.Class
+	paX_synthetic = dpa_synthetic.drop('Class', axis=1)
+	X_train = paX_synthetic.iloc[:subset_size]
+	y_train = pay_synthetic.iloc[:subset_size]
+	lasso = Lasso(alpha=0.001)
+	lasso.fit(X_train, y_train)
+	nonpartisan_count = 0
+	for i in lasso.coef_:
+		if i == 0:
+			nonpartisan_count += 1
+	return nonpartisan_count/16
+
+
 def main():
 	'''
 	TODO modify or use the following code to evaluate your implemented
@@ -114,19 +136,19 @@ def main():
 	print(train_error)
 	print(test_error)
 	#Q4
-	# lasso.coef_
+	nonpartisan_fraction = np.zeros(10)
+	for i in range(10):
+		nonpartisan_fraction[i] = q4_solution(subset_size=i * 400 + 400)
+		print('nonpartisan fraction {:2.4f} on {} ''examples'.format(
+			nonpartisan_fraction[i], (i + 1) * 400))
+	print(nonpartisan_fraction)
 	#You may find lasso.coef_ useful
 	#Q5
 	print('LASSO  P(C= 1|A_observed) ')
 	lasso_evaluate_incomplete_entry()
 	'''
-	train_error = np.zeros(10)
-	test_error = np.zeros(10)
-	for i in range(10):
-		x, y =lasso_evaluate(train_subset=True, subset_size=i*10+10)
-		test_error[i] = y
-		train_error[i] =x
-	print(train_error)
-	print(test_error)
+
+
+
 if __name__ == "__main__":
     main()

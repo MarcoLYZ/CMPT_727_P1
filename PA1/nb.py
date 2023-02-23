@@ -147,8 +147,7 @@ C_data:
 1: democrat
 0:republican
 '''
-# A_data, C_data = load_vote_data()
-A_data, C_data = load_simulate_data('./data/q4_data')
+A_data, C_data = load_vote_data()
 
 
 def evaluate(classifier_cls, train_subset=False, subset_size=0):
@@ -239,6 +238,43 @@ def predict_unobserved(classifier_cls, index=11):
     return
 
 
+def q4_solution(classifier_cls, subset_size=400):
+    global A_data, C_data
+    # load the synthetic data
+    if not os.path.exists('./data/q4_data'):
+        generate_q4_data(4000, './data/q4_data')
+    A_synthetic_data, C_synthetic_data = load_simulate_data('./data/q4_data')
+    republican_count = 0
+    democrat_count = 0
+    republican_yes = [0] * 16
+    democrat_yes = [0] * 16
+    # print("Holdout round: %s." % (holdout_round + 1))
+    A_train = A_synthetic_data[0:subset_size, :]
+    C_train = C_synthetic_data[0:subset_size]
+    # train the classifiers
+    classifier = classifier_cls(A_train, C_train)
+
+    # democrat = 1,republican = 0
+    for index, entry in enumerate(A_data):
+        c_pred, _ = classifier.classify(entry)
+        if c_pred == 0:
+            republican_count += 1
+            for bill, vote in enumerate(entry):
+                republican_yes[bill] += vote
+        else:
+            democrat_count += 1
+            for bill, vote in enumerate(entry):
+                democrat_yes[bill] += vote
+    nonpartisan_count = 0
+
+    for index in range(16):
+        if abs(republican_yes[index]/republican_count - democrat_yes[index]/democrat_count) < 0.1:
+            nonpartisan_count += 1
+    return nonpartisan_count/16
+
+
+
+
 def main():
     '''
     TODO modify or use the following code to evaluate your implemented
@@ -263,7 +299,14 @@ def main():
     print(train_error)
     print(test_error)
     ##For Q4
-    generate_q4_data(4000, './data/q4_data')
+    print('Naive Bayes (Question 4)')
+    nonpartisan_fraction = np.zeros(10)
+    for x in range(10):
+        nonpartisan_fraction[x] = q4_solution(NBClassifier, subset_size=(x + 1) * 400)
+        print('nonpartisan fraction {:2.4f} on {} ''examples'.format(
+            nonpartisan_fraction[x], (x + 1) * 400))
+    print(nonpartisan_fraction)
+
     ##For Q5
     print('Naive Bayes Classifier on missing data')
     evaluate_incomplete_entry(NBClassifier)
@@ -273,17 +316,6 @@ def main():
         index + 1))
     predict_unobserved(NBClassifier, index)
    '''
-    print('Naive Bayes (Small Data)')
-    train_error = np.zeros(10)
-    test_error = np.zeros(10)
-    for x in range(10):
-        accuracy, train_accuracy = evaluate(NBClassifier, train_subset=True, subset_size=(x + 1) * 400)
-        train_error[x] = 1 - train_accuracy
-        test_error[x] = 1 - accuracy
-        print('  10-fold cross validation total test error {:2.4f} total train error {:2.4f}on {} ''examples'.format(
-            1 - accuracy, 1 - train_accuracy, (x + 1) * 10))
-    print(train_error)
-    print(test_error)
 
 
 if __name__ == '__main__':
