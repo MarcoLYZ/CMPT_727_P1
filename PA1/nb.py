@@ -110,10 +110,19 @@ class NBClassifier(object):
         for c in [0, 1]:
             log_prob = np.log(self.p_c[c])
             for i in range(len(entry)):
-                log_prob += self.cpts[i].get_cond_prob(entry, c)
+                if entry[i] != -1:
+                    log_prob += np.log(self.cpts[i].get_cond_prob(entry, c))
+                else:
+                    prob_now = 0
+                    entry[i] = 0
+                    p_i_0 = sum(self.cpts[0].count_A_i)[0]/(sum(self.cpts[0].count_A_i)[0] + sum(self.cpts[0].count_A_i)[1])
+                    prob_now += (p_i_0)*self.cpts[i].get_cond_prob(entry, c)
+                    entry[i] = 1
+                    prob_now += (1 - p_i_0)*self.cpts[i].get_cond_prob(entry, c)
+                    log_prob += np.log(prob_now)
+                    entry[i] = -1
             log_probs[c] = log_prob
 
-        # Determine predicted label and return tuple of (label, log probability)
         pred_label = max(log_probs, key=log_probs.get)
         return (pred_label, log_probs[pred_label])
 
@@ -124,15 +133,29 @@ class NBClassifier(object):
         We only use the 2nd value (P(A_index =1 |entry)) in this assignment
         '''
         probs = []
-        for val in [0, 1]:
-            entry[index] = val
-            log_p_c0, log_p_c1 = 0, 0
-            for i, cpt in enumerate(self.cpts):
-                log_p_c0 += cpt.get_cond_prob(entry, 0)
-                log_p_c1 += cpt.get_cond_prob(entry, 1)
-            log_p_c0 += np.log(self.p_c[0])
-            log_p_c1 += np.log(self.p_c[1])
-            p_ai_given_entry = np.exp(log_p_c1) / (np.exp(log_p_c0) + np.exp(log_p_c1))
+        for a_i in [0, 1]:
+            entry[index] = a_i
+            p_ai_given_entry = 0
+            for c in [0, 1]:
+                count_ai = sum(self.cpts[index].count_A_i)
+                p_ai = count_ai[a_i]/sum(count_ai)
+                p_c = self.p_c[c]
+                log_p_c_given_ai = np.log(self.p_c[c])
+                for i in range(len(entry)):
+                    if entry[i] != -1:
+                        log_p_c_given_ai += np.log(self.cpts[i].get_cond_prob(entry, c))
+                    else:
+                        prob_now = 0
+                        entry[i] = 0
+                        p_i_0 = sum(self.cpts[0].count_A_i)[0] / (
+                                    sum(self.cpts[0].count_A_i)[0] + sum(self.cpts[0].count_A_i)[1])
+                        prob_now += (p_i_0) * self.cpts[i].get_cond_prob(entry, c)
+                        entry[i] = 1
+                        prob_now += (1 - p_i_0) * self.cpts[i].get_cond_prob(entry, c)
+                        entry[i] = -1
+                        log_p_c_given_ai += np.log(prob_now)
+                p_ai_given_entry += p_ai*np.exp(log_p_c_given_ai)/p_c
+            entry[index] = -1
             probs.append(p_ai_given_entry)
         return tuple(probs)
 
@@ -316,7 +339,13 @@ def main():
         index + 1))
     predict_unobserved(NBClassifier, index)
    '''
+    print('Naive Bayes Classifier on missing data')
+    evaluate_incomplete_entry(NBClassifier)
 
+    index = 11
+    print('Prediting vote of A%s using NBClassifier on missing data' % (
+            index + 1))
+    predict_unobserved(NBClassifier, index)
 
 if __name__ == '__main__':
     main()
