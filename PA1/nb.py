@@ -19,8 +19,6 @@ alpha = 0.1
 # --------------------------------------------------------------------------
 # Naive bayes CPT and classifier
 # --------------------------------------------------------------------------
-
-
 class NBCPT(object):
     '''
     NB Conditional Probability Table (CPT) for a child attribute.  Each child
@@ -106,25 +104,24 @@ class NBClassifier(object):
         variable and also the log of the conditional probability of this
         assignment in a tuple, e.g. return (c_pred, logP_c_pred)
         '''
-        log_probs = {}
+        probs = []
         for c in [0, 1]:
-            log_prob = np.log(self.p_c[c])
+            prob = self.p_c[c]
             for i in range(len(entry)):
                 if entry[i] != -1:
-                    log_prob += np.log(self.cpts[i].get_cond_prob(entry, c))
+                    prob *= self.cpts[i].get_cond_prob(entry, c)
                 else:
                     prob_now = 0
                     entry[i] = 0
-                    p_i_0 = sum(self.cpts[0].count_A_i)[0]/(sum(self.cpts[0].count_A_i)[0] + sum(self.cpts[0].count_A_i)[1])
-                    prob_now += (p_i_0)*self.cpts[i].get_cond_prob(entry, c)
+                    prob_now += self.cpts[i].get_cond_prob(entry, c)
                     entry[i] = 1
-                    prob_now += (1 - p_i_0)*self.cpts[i].get_cond_prob(entry, c)
-                    log_prob += np.log(prob_now)
+                    prob_now += self.cpts[i].get_cond_prob(entry, c)
+                    prob *= prob_now
                     entry[i] = -1
-            log_probs[c] = log_prob
-
-        pred_label = max(log_probs, key=log_probs.get)
-        return (pred_label, log_probs[pred_label])
+            probs.append(prob)
+        probs /= sum(probs)
+        pred_label = np.argmax(probs)
+        return (pred_label, np.log(probs[pred_label]))
 
     def predict_unobserved(self, entry, index):
         ''' TODO
@@ -140,23 +137,22 @@ class NBClassifier(object):
                 count_ai = sum(self.cpts[index].count_A_i)
                 p_ai = count_ai[a_i]/sum(count_ai)
                 p_c = self.p_c[c]
-                log_p_c_given_ai = np.log(self.p_c[c])
+                p_c_given_ai = self.p_c[c]
                 for i in range(len(entry)):
                     if entry[i] != -1:
-                        log_p_c_given_ai += np.log(self.cpts[i].get_cond_prob(entry, c))
+                        p_c_given_ai *= self.cpts[i].get_cond_prob(entry, c)
                     else:
                         prob_now = 0
                         entry[i] = 0
-                        p_i_0 = sum(self.cpts[0].count_A_i)[0] / (
-                                    sum(self.cpts[0].count_A_i)[0] + sum(self.cpts[0].count_A_i)[1])
-                        prob_now += (p_i_0) * self.cpts[i].get_cond_prob(entry, c)
+                        prob_now += self.cpts[i].get_cond_prob(entry, c)
                         entry[i] = 1
-                        prob_now += (1 - p_i_0) * self.cpts[i].get_cond_prob(entry, c)
+                        prob_now += self.cpts[i].get_cond_prob(entry, c)
+                        p_c_given_ai *= prob_now
                         entry[i] = -1
-                        log_p_c_given_ai += np.log(prob_now)
-                p_ai_given_entry += p_ai*np.exp(log_p_c_given_ai)/p_c
+                p_ai_given_entry += p_ai*p_c_given_ai/p_c
             entry[index] = -1
             probs.append(p_ai_given_entry)
+        probs /= sum(probs)
         return tuple(probs)
 
 
@@ -291,11 +287,9 @@ def q4_solution(classifier_cls, subset_size=400):
     nonpartisan_count = 0
 
     for index in range(16):
-        if abs(republican_yes[index]/republican_count - democrat_yes[index]/democrat_count) < 0.1:
+        if abs(republican_yes[index] / republican_count - democrat_yes[index] / democrat_count) < 0.1:
             nonpartisan_count += 1
-    return nonpartisan_count/16
-
-
+    return nonpartisan_count / 16
 
 
 def main():
@@ -339,13 +333,8 @@ def main():
         index + 1))
     predict_unobserved(NBClassifier, index)
    '''
-    print('Naive Bayes Classifier on missing data')
-    evaluate_incomplete_entry(NBClassifier)
+    
 
-    index = 11
-    print('Prediting vote of A%s using NBClassifier on missing data' % (
-            index + 1))
-    predict_unobserved(NBClassifier, index)
 
 if __name__ == '__main__':
     main()
