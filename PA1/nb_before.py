@@ -32,11 +32,9 @@ class NBCPT(object):
         state of the learned parameters for this CPT
             - A_i: the index of the child variable
         '''
-        super(NBCPT, self).__init__()
-
         self.A_i = A_i
-        self.A_i_count = [0] * 2
-        self.c_count = [0] * 2
+        self.count_c = [0] * 2
+        self.count_A_i = np.zeros((2, 2))
 
     def learn(self, A, C):
         '''
@@ -47,22 +45,19 @@ class NBCPT(object):
             - C: a 1-d n-element numpy where the elements correspond to the
               class labels of the rows in A
         '''
-        for i in range(2):
-            self.c_count[i] += len(C[C == i])
-            self.A_i_count[i] += len(C[(A[:, self.A_i] == 1) & (C == i)])
+        for index, row in enumerate(A):
+            self.count_c[C[index]] += 1
+            self.count_A_i[row[self.A_i]][C[index]] += 1
 
     def get_cond_prob(self, entry, c):
         ''' TODO
-        return the conditional probability P(X|Pa(X)) for the values
+        return the conditional probability P(A_i|C=c) for the values
         specified in the example entry and class label c
             - entry: full assignment of variables
                 e.g. entry = np.array([0,1,1]) means A_0 = 0, A_1 = 1, A_2 = 1
             - c: the class
         '''
-        if entry[self.A_i] == 1:
-            return (self.A_i_count[c] + alpha) / (self.c_count[c] + 2 * alpha)
-        else:
-            return 1 - (self.A_i_count[c] + alpha) / (self.c_count[c] + 2 * alpha)
+        return (self.count_A_i[entry[self.A_i]][c] + alpha) / (self.count_c[c] + 2 * alpha)
 
 
 class NBClassifier(object):
@@ -78,8 +73,8 @@ class NBClassifier(object):
             - P_c: the probabilities for the class variable C
             - cpts: a list of NBCPT objects
         '''
-        self.cpts = [NBCPT(i) for i in range(16)]
-        self.P_c = 0.0
+        self.cpts = []
+        self.p_c = [0] * 2
         self._train(A_train, C_train)
 
     def _train(self, A_train, C_train):
@@ -90,12 +85,18 @@ class NBClassifier(object):
             - C_train: a 1-d n-element numpy where the elements correspond to
               the class labels of the rows in A
         '''
-        self.P_c = len(C_train[C_train == 1]) / float(len(C_train))
-        for cpt in self.cpts:
+        n = len(C_train)
+        classes, counts = np.unique(C_train, return_counts=True)
+        for i in range(len(classes)):
+            self.p_c[classes[i]] = counts[i] / n
+
+        for i in range(A_train.shape[1]):
+            cpt = NBCPT(i)
             cpt.learn(A_train, C_train)
+            self.cpts.append(cpt)
 
     def classify(self, entry):
-        '''
+        ''' TODO
         return the log probabilites for class == 0 and class == 1 as a
         tuple for the given entry
         - entry: full assignment of variables
@@ -104,21 +105,24 @@ class NBClassifier(object):
         variable and also the log of the conditional probability of this
         assignment in a tuple, e.g. return (c_pred, logP_c_pred)
         '''
-        P_c_pred = [0]*2
-        unknown_index = [index for index, value in enumerate(entry) if value == -1]
-        unknown_iterations = list(itertools.product((0, 1), repeat=len(unknown_index))) + [[]]
-        for unknown_iteration in unknown_iterations:
-            for index, value in enumerate(unknown_iteration):
-                entry[unknown_index[index]] = value
-            P_c_pred_current = [1] * 2
-            for cpt in self.cpts:
-                for i in range(2):
-                    P_c_pred_current[i] *= cpt.get_cond_prob(entry, i)
-            P_c_pred[0] += P_c_pred_current[0] * (1 - self.P_c)
-            P_c_pred[1] += P_c_pred_current[1] * self.P_c
-        P_c_pred /= np.sum(P_c_pred)
-        c_pred = np.argmax(P_c_pred)
-        return c_pred, np.log(P_c_pred[c_pred])
+        probs = []
+        for c in [0, 1]:
+            prob = self.p_c[c]
+            for i in range(len(entry)):
+                if entry[i] != -1:
+                    prob *= self.cpts[i].get_cond_prob(entry, c)
+                else:
+                    # prob_now = 0
+                    # entry[i] = 0
+                    # prob_now += self.cpts[iprob = self.p_c[0]].get_cond_prob(entry, c)
+                    # entry[i] = 1
+                    # prob_now += self.cpts[i].get_cond_prob(entry, c)
+                    # prob *= prob_now
+                    prob *= 1
+            probs.append(prob)
+        probs /= np.sum(probs)
+        pred_label = np.argmax(probs)
+        return (pred_label, np.log(probs[pred_label]))
 
     def predict_unobserved(self, entry, index):
         ''' TODO
@@ -126,22 +130,33 @@ class NBClassifier(object):
         Return a tuple of probabilities for A_index=0  and  A_index = 1
         We only use the 2nd value (P(A_index =1 |entry)) in this assignment
         '''
-        P_index_pred = [0] * 2
-        unknown_index = [i for i, e in enumerate(entry) if e == -1 and i != index]
-        unknown_iterations = list(itertools.product((0, 1), repeat=len(unknown_index))) + [[]]
-        for P_index_value in range(2):
-            entry[index] = P_index_value
-            for unknown_iteration in unknown_iterations:
-                for i, value in enumerate(unknown_iteration):
-                    entry[unknown_index[i]] = value
-                P_c_pred_current = [1] * 2
-                for cpt in self.cpts:
-                    for i in range(2):
-                        P_c_pred_current[i] *= cpt.get_cond_prob(entry, i)
-                P_c_pred_current[0] *= 1 - self.P_c
-                P_c_pred_current[1] *= self.P_c
-                P_index_pred[P_index_value] += np.sum(P_c_pred_current)
-        return P_index_pred/np.sum(P_index_pred)
+        probs = [0] * 2
+        for a_i in [0, 1]:
+            entry[index] = a_i
+            p_ai_given_entry = 0
+            for c in [0, 1]:
+                # count_ai = sum(self.cpts[index].count_A_i)
+                # p_ai = count_ai[a_i]/sum(count_ai)
+                # p_c = self.p_c[c]
+                p_c_given_ai = self.p_c[c]
+                for i in range(len(entry)):
+                    if entry[i] != -1:
+                        p_c_given_ai *= self.cpts[i].get_cond_prob(entry, c)
+                    else:
+                        # prob_now = 0
+                        # entry[i] = 0
+                        # prob_now += self.cpts[i].get_cond_prob(entry, c)
+                        # entry[i] = 1
+                        # prob_now += self.cpts[i].get_cond_prob(entry, c)
+                        # p_c_given_ai *= prob_now
+                        # entry[i] = -1
+                        p_c_given_ai *= 1
+                # p_ai_given_entry += p_ai*p_c_given_ai/p_c
+                p_ai_given_entry += p_c_given_ai
+            entry[index] = -1
+            probs[a_i] = p_ai_given_entry
+        probs /= sum(probs)
+        return tuple(probs)
 
 
 # load data
@@ -265,6 +280,7 @@ def q4_solution(classifier_cls, subset_size=400):
     democrat_count = 0
     republican_yes = [0] * 16
     democrat_yes = [0] * 16
+    # print("Holdout round: %s." % (holdout_round + 1))
     A_train = A_synthetic_data[0:subset_size, :]
     C_train = C_synthetic_data[0:subset_size]
     # train the classifiers
@@ -333,28 +349,21 @@ def main():
         index + 1))
     predict_unobserved(NBClassifier, index)
    '''
-    # print('Naive Bayes (Small Data)')
-    # train_error = np.zeros(15)
-    # test_error = np.zeros(15)
-    # subset_sizes = list(np.arange(5, 10)) + [(i + 1) * 10 for i in range(10)]
-    # for i, x in enumerate(subset_sizes):
-    #     accuracy, train_accuracy = evaluate(NBClassifier, train_subset=True, subset_size=x)
-    #     train_error[i] = 1 - train_accuracy
-    #     test_error[i] = 1 - accuracy
-    #     print('  10-fold cross validation total test error {:2.4f} total train error {:2.4f}on {} ''examples'.format(
-    #         1 - accuracy, 1 - train_accuracy, x))
-    # print(train_error)
-    # print(test_error)
-    # plot(subset_sizes, train_error, test_error)
+    print('Naive Bayes (Small Data)')
+    train_error = np.zeros(15)
+    test_error = np.zeros(15)
+    subset_sizes = list(np.arange(5, 10)) + [(i + 1) * 10 for i in range(10)]
+    for i, x in enumerate(subset_sizes):
+        accuracy, train_accuracy = evaluate(NBClassifier, train_subset=True, subset_size=x)
+        train_error[i] = 1 - train_accuracy
+        test_error[i] = 1 - accuracy
+        print('  10-fold cross validation total test error {:2.4f} total train error {:2.4f}on {} ''examples'.format(
+            1 - accuracy, 1 - train_accuracy, x))
+    print(train_error)
+    print(test_error)
+    plot(subset_sizes, train_error, test_error)
 
-    # print('Naive Bayes')
-    # accuracy, num_examples = evaluate(NBClassifier, train_subset=False)
-    # print('  10-fold cross validation total test error {:2.4f} on {} '
-    #       'examples'.format(1 - accuracy, num_examples))
-    print('Naive Bayes')
-    accuracy, num_examples = evaluate(NBClassifier, train_subset=False)
-    print('  10-fold cross validation total test error {:2.4f} on {} '
-          'examples'.format(1 - accuracy, num_examples))
+
 
 
 if __name__ == '__main__':

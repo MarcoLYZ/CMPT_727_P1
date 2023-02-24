@@ -147,8 +147,12 @@ def main():
 	print('LASSO  P(C= 1|A_observed) ')
 	lasso_evaluate_incomplete_entry()
 	'''
-	error_rate, unused = lasso_evaluate()
-	print('10CV Error rate {}'.format(error_rate))
+	nonpartisan_fraction = np.zeros(10)
+	for i in range(10):
+		nonpartisan_fraction[i] = q4_solution(subset_size=i * 400 + 400)
+		print('nonpartisan fraction {:2.4f} on {} ''examples'.format(
+			nonpartisan_fraction[i], (i + 1) * 400))
+	print(nonpartisan_fraction)
 
 
 
