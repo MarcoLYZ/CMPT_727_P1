@@ -10,7 +10,7 @@ from itertools import product
 from matplotlib import pyplot as plt
 # helpers to load data
 from data_helper import load_vote_data, load_incomplete_entry, load_simulate_data, generate_q4_data
-
+from lasso import *
 # helpers to learn and traverse the tree over attributes
 
 # pseudocounts for uniform dirichlet prior
@@ -283,10 +283,10 @@ def q4_solution(classifier_cls, subset_size=400):
                 democrat_yes[bill] += vote
     nonpartisan_count = 0
 
-    for index in range(16):
+    for index in range(4, 16):
         if abs(republican_yes[index] / republican_count - democrat_yes[index] / democrat_count) < 0.1:
             nonpartisan_count += 1
-    return nonpartisan_count / 16
+    return nonpartisan_count / 12
 
 
 def main():
@@ -301,8 +301,9 @@ def main():
     accuracy, num_examples = evaluate(NBClassifier, train_subset=False)
     print('  10-fold cross validation total test error {:2.4f} on {} '
           'examples'.format(1 - accuracy, num_examples))
+
+
     ##For Q3
-    print('Naive Bayes (Small Data)')
     train_error = np.zeros(15)
     test_error = np.zeros(15)
     subset_sizes = list(np.arange(5, 10)) + [(i + 1) * 10 for i in range(10)]
@@ -314,7 +315,27 @@ def main():
             1 - accuracy, 1 - train_accuracy, x))
     print(train_error)
     print(test_error)
-    plot(subset_sizes, train_error, test_error)
+
+    train_error_lasso = np.zeros(15)
+    test_error_lasso = np.zeros(15)
+    subset_sizes = list(np.arange(5, 10)) + [(i + 1) * 10 for i in range(10)]
+    for i, s in enumerate(subset_sizes):
+        x, y = lasso_evaluate(train_subset=True, subset_size=s)
+        train_error_lasso[i] = x
+        test_error_lasso[i] = y
+    print(train_error_lasso)
+    print(test_error_lasso)
+
+    plt.plot(subset_sizes, train_error, label="NB Train")
+    plt.plot(subset_sizes, test_error, label="NB Test")
+    plt.plot(subset_sizes, train_error_lasso, label="LASSO Train")
+    plt.plot(subset_sizes, test_error_lasso, label="LASSO Test")
+    plt.title("Classifier Error Rates")
+    plt.xlabel("Training Set Size")
+    plt.ylabel("Error Rate")
+    plt.legend()
+    plt.show()
+
     ##For Q4
     print('Naive Bayes (Question 4)')
     nonpartisan_fraction = np.zeros(10)
@@ -333,28 +354,17 @@ def main():
         index + 1))
     predict_unobserved(NBClassifier, index)
    '''
-    # print('Naive Bayes (Small Data)')
-    # train_error = np.zeros(15)
-    # test_error = np.zeros(15)
-    # subset_sizes = list(np.arange(5, 10)) + [(i + 1) * 10 for i in range(10)]
-    # for i, x in enumerate(subset_sizes):
-    #     accuracy, train_accuracy = evaluate(NBClassifier, train_subset=True, subset_size=x)
-    #     train_error[i] = 1 - train_accuracy
-    #     test_error[i] = 1 - accuracy
-    #     print('  10-fold cross validation total test error {:2.4f} total train error {:2.4f}on {} ''examples'.format(
-    #         1 - accuracy, 1 - train_accuracy, x))
-    # print(train_error)
-    # print(test_error)
-    # plot(subset_sizes, train_error, test_error)
 
-    # print('Naive Bayes')
-    # accuracy, num_examples = evaluate(NBClassifier, train_subset=False)
-    # print('  10-fold cross validation total test error {:2.4f} on {} '
-    #       'examples'.format(1 - accuracy, num_examples))
-    print('Naive Bayes')
-    accuracy, num_examples = evaluate(NBClassifier, train_subset=False)
-    print('  10-fold cross validation total test error {:2.4f} on {} '
-          'examples'.format(1 - accuracy, num_examples))
+    print('Naive Bayes (Question 4)')
+    nonpartisan_fraction = np.zeros(10)
+    for x in range(10):
+        if x != 9:
+            continue
+        nonpartisan_fraction[x] = q4_solution(NBClassifier, subset_size=(x + 1) * 400)
+        print('nonpartisan fraction {:2.4f} on {} ''examples'.format(
+            nonpartisan_fraction[x], (x + 1) * 400))
+    print(nonpartisan_fraction)
+
 
 
 if __name__ == '__main__':

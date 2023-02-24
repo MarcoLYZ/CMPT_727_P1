@@ -95,6 +95,17 @@ def lasso_evaluate_incomplete_entry():
 	print(lasso_predit)
 
 
+def plot(subset_sizes, train_errors, test_errors):
+
+    plt.plot(subset_sizes, test_errors, label = "LASSO Test Error")
+    plt.plot(subset_sizes, train_errors, label = "LASSO Train Error")
+    plt.title("Classifier Error Rates")
+    plt.xlabel("Sample Size")
+    plt.ylabel("Error")
+    plt.legend()
+    plt.show()
+
+
 def q4_solution(subset_size):
 	# load synthetic data
 	dpa_synthetic = pd.read_csv('./data/q4_data')
@@ -111,10 +122,11 @@ def q4_solution(subset_size):
 	lasso = Lasso(alpha=0.001)
 	lasso.fit(X_train, y_train)
 	nonpartisan_count = 0
-	for i in lasso.coef_:
+	for index in range(4, 16):
+		i = lasso.coef_[index]
 		if i == 0:
 			nonpartisan_count += 1
-	return nonpartisan_count/16
+	return nonpartisan_count/12
 
 
 def main():
@@ -137,23 +149,22 @@ def main():
 	print(test_error)
 	#Q4
 	nonpartisan_fraction = np.zeros(10)
+	subset_size = [i * 400 + 400 for i in range(10)]
 	for i in range(10):
 		nonpartisan_fraction[i] = q4_solution(subset_size=i * 400 + 400)
 		print('nonpartisan fraction {:2.4f} on {} ''examples'.format(
 			nonpartisan_fraction[i], (i + 1) * 400))
 	print(nonpartisan_fraction)
+	plt.plot(subset_size, nonpartisan_fraction, label="LASSO nonpartisan_fraction")
+	plt.legend()
+	plt.show()
 	#You may find lasso.coef_ useful
 	#Q5
 	print('LASSO  P(C= 1|A_observed) ')
 	lasso_evaluate_incomplete_entry()
 	'''
-	nonpartisan_fraction = np.zeros(10)
-	for i in range(10):
-		nonpartisan_fraction[i] = q4_solution(subset_size=i * 400 + 400)
-		print('nonpartisan fraction {:2.4f} on {} ''examples'.format(
-			nonpartisan_fraction[i], (i + 1) * 400))
-	print(nonpartisan_fraction)
-
+	print('LASSO  P(C= 1|A_observed) ')
+	lasso_evaluate_incomplete_entry()
 
 
 if __name__ == "__main__":
