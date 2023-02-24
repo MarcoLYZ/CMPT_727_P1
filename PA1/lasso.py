@@ -147,6 +147,8 @@ def main():
 	print('LASSO  P(C= 1|A_observed) ')
 	lasso_evaluate_incomplete_entry()
 	'''
+	error_rate, unused = lasso_evaluate()
+	print('10CV Error rate {}'.format(error_rate))
 
 
 
